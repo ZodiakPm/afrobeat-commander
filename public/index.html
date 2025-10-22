@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Afrobeat Commander</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQWZyb2JlYXQgQ29tbWFuZGVyIiwic2hvcnRfbmFtZSI6IkFmcm9iZWF0IiwiZGVzY3JpcHRpb24iOiJHZXN0aW9uIGRlIGdyb3VwZSBtdXNpY2FsIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMxYTFhMWEiLCJ0aGVtZV9jb2xvciI6IiNmZjZiMzUifQ==">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1810 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card h2 {
+            color: #ff6b35;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+
+        .user-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .user-btn {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .user-btn:hover {
+            background: rgba(255, 107, 53, 0.2);
+        }
+
+        .user-btn.active {
+            background: #ff6b35;
+            border-color: #f7931e;
+        }
+
+        .calendar {
+            display: grid;
+            gap: 10px;
+        }
+
+        .month-selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .month-selector button {
+            background: #ff6b35;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .month-selector button:hover {
+            background: #f7931e;
+            transform: scale(1.05);
+        }
+
+        .month-selector h3 {
+            font-size: 20px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            border: 2px solid transparent;
+        }
+
+        .calendar-day.available {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+        }
+
+        .calendar-day.unavailable {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+        }
+
+        .calendar-day:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .calendar-day.header {
+            background: #ff6b35;
+            cursor: default;
+            font-weight: bold;
+        }
+
+        .calendar-day.header:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .day-number {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .availability-count {
+            font-size: 11px;
+            margin-top: 4px;
+            opacity: 0.8;
+        }
+
+        .concert-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .concert-item {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.2) 0%, rgba(247, 147, 30, 0.2) 100%);
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid #ff6b35;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .concert-item.new {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(255, 107, 53, 0); }
+        }
+
+        .concert-info h3 {
+            margin-bottom: 5px;
+            color: #ff6b35;
+        }
+
+        .concert-info p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: #ff6b35;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #f7931e;
+            transform: translateY(-2px);
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        .link-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .link-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .link-item a {
+            color: #ff6b35;
+            text-decoration: none;
+            font-size: 16px;
+            flex-grow: 1;
+        }
+
+        .link-item a:hover {
+            text-decoration: underline;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #ff6b35;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            color: #ff6b35;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        .badge {
+            background: #ef4444;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.6;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #2d1810;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid {
+                gap: 5px;
+            }
+            
+            .day-number {
+                font-size: 14px;
+            }
+            
+            .availability-count {
+                font-size: 9px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎺 Afrobeat Commander</h1>
+        <p>Gestion de groupe musical</p>
+    </div>
+
+    <div class="main-content">
+        <!-- Section Mon Planning -->
+        <div id="section-planning" class="section active">
+            <div class="card">
+                <h2>Mon Planning Personnel</h2>
+                <div class="user-selector" id="userSelector"></div>
+                <div id="personalCalendar"></div>
+            </div>
+        </div>
+
+        <!-- Section Planning Groupe -->
+        <div id="section-group" class="section">
+            <div class="card">
+                <h2>Planning du Groupe</h2>
+                <div class="stats" id="groupStats"></div>
+                <div id="groupCalendar"></div>
+            </div>
+        </div>
+
+        <!-- Section Concerts -->
+        <div id="section-concerts" class="section">
+            <div class="card">
+                <h2>Prochains Concerts <span class="badge" id="newConcertsBadge" style="display: none;">NOUVEAU</span></h2>
+                <button class="btn" onclick="openConcertModal()">+ Ajouter un concert</button>
+                <div id="concertList" class="concert-list"></div>
+            </div>
+        </div>
+
+        <!-- Section Liens -->
+        <div id="section-links" class="section">
+            <div class="card">
+                <h2>Liens Utiles</h2>
+                <button class="btn" onclick="openLinkModal()">+ Ajouter un lien</button>
+                <div id="linkList" class="link-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Concert -->
+    <div id="concertModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouveau Concert</h2>
+                <button class="modal-close" onclick="closeConcertModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Date du concert</label>
+                <input type="date" id="concertDate">
+            </div>
+            <div class="form-group">
+                <label>Lieu</label>
+                <input type="text" id="concertLocation" placeholder="Ex: Le Bataclan, Paris">
+            </div>
+            <div class="form-group">
+                <label>Détails (optionnel)</label>
+                <textarea id="concertDetails" rows="3" placeholder="Informations supplémentaires..."></textarea>
+            </div>
+            <button class="btn" onclick="addConcert()">Ajouter</button>
+        </div>
+    </div>
+
+    <!-- Modal Lien -->
+    <div id="linkModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouveau Lien</h2>
+                <button class="modal-close" onclick="closeLinkModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Nom du lien</label>
+                <input type="text" id="linkName" placeholder="Ex: Drive partagé">
+            </div>
+            <div class="form-group">
+                <label>URL</label>
+                <input type="url" id="linkUrl" placeholder="https://...">
+            </div>
+            <button class="btn" onclick="addLink()">Ajouter</button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-btn active" onclick="showSection('planning')">
+            <span class="nav-icon">📅</span>
+            <span>Mon Planning</span>
+        </button>
+        <button class="nav-btn" onclick="showSection('group')">
+            <span class="nav-icon">👥</span>
+            <span>Groupe</span>
+        </button>
+        <button class="nav-btn" onclick="showSection('concerts')">
+            <span class="nav-icon">🎵</span>
+            <span>Concerts</span>
+        </button>
+        <button class="nav-btn" onclick="showSection('links')">
+            <span class="nav-icon">🔗</span>
+            <span>Liens</span>
+        </button>
+    </div>
+
+    <script>
+        // Configuration API - MODIFIER L'URL SELON VOTRE SERVEUR
+        const API_URL = window.location.origin.includes('localhost') 
+            ? 'http://localhost:3000/api' 
+            : '/api';
+
+        let currentUser = null;
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        const members = ['Lead Guitar', 'Bass', 'Drums', 'Keys', 'Saxophone', 'Vocals'];
+        const userId = 'user_' + (localStorage.getItem('userId') || Math.random().toString(36).substr(2, 9));
+        
+        // Sauvegarder l'ID utilisateur
+        if (!localStorage.getItem('userId')) {
+            localStorage.setItem('userId', userId.replace('user_', ''));
+        }
+
+        // ========== API CALLS ==========
+        
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                alert('Erreur de connexion au serveur. Vérifiez que le backend est démarré.');
+                throw error;
+            }
+        }
+
+        async function loadCurrentUser() {
+            try {
+                const data = await apiCall(`/current-user/${userId}`);
+                currentUser = data.user;
+            } catch (e) {
+                currentUser = null;
+            }
+            
+            if (!currentUser) {
+                currentUser = members[0];
+                await saveCurrentUser();
+            }
+        }
+
+        async function saveCurrentUser() {
+            try {
+                await apiCall(`/current-user/${userId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ user: currentUser })
+                });
+            } catch (e) {
+                console.error('Error saving user:', e);
+            }
+        }
+
+        async function getAvailability(member, year, month) {
+            try {
+                return await apiCall(`/availability/${member}/${year}/${month}`);
+            } catch (e) {
+                return {};
+            }
+        }
+
+        async function setAvailability(member, year, month, data) {
+            try {
+                return await apiCall(`/availability/${member}/${year}/${month}`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+            } catch (e) {
+                console.error('Error setting availability:', e);
+                return { success: false };
+            }
+        }
+
+        async function getAllAvailabilities(year, month) {
+            try {
+                return await apiCall(`/availability/all/${year}/${month}`);
+            } catch (e) {
+                return {};
+            }
+        }
+
+        async function getConcerts() {
+            try {
+                return await apiCall('/concerts');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function addConcertAPI(concert) {
+            return await apiCall('/concerts', {
+                method: 'POST',
+                body: JSON.stringify(concert)
+            });
+        }
+
+        async function deleteConcertAPI(index) {
+            return await apiCall(`/concerts/${index}`, {
+                method: 'DELETE'
+            });
+        }
+
+        async function getLinks() {
+            try {
+                return await apiCall('/links');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function addLinkAPI(link) {
+            return await apiCall('/links', {
+                method: 'POST',
+                body: JSON.stringify(link)
+            });
+        }
+
+        async function deleteLinkAPI(index) {
+            return await apiCall(`/links/${index}`, {
+                method: 'DELETE'
+            });
+        }
+
+        // ========== UI FUNCTIONS ==========
+
+        async function initApp() {
+            await loadCurrentUser();
+            renderUserSelector();
+            await renderPersonalCalendar();
+            await renderGroupCalendar();
+            await renderConcerts();
+            await renderLinks();
+        }
+
+        function renderUserSelector() {
+            const container = document.getElementById('userSelector');
+            container.innerHTML = members.map(member => `
+                <button class="user-btn ${member === currentUser ? 'active' : ''}" 
+                        onclick="selectUser('${member}')">
+                    ${member}
+                </button>
+            `).join('');
+        }
+
+        async function selectUser(user) {
+            currentUser = user;
+            await saveCurrentUser();
+            renderUserSelector();
+            await renderPersonalCalendar();
+        }
+
+        function getDaysInMonth(month, year) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function getFirstDayOfMonth(month, year) {
+            return new Date(year, month, 1).getDay();
+        }
+
+        async function renderPersonalCalendar() {
+            const container = document.getElementById('personalCalendar');
+            const days = getDaysInMonth(currentMonth, currentYear);
+            const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+            const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                              'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+            
+            const availabilities = await getAvailability(currentUser, currentYear, currentMonth);
+
+            let html = `
+                <div class="month-selector">
+                    <button onclick="changeMonth(-1)">◀</button>
+                    <h3>${monthNames[currentMonth]} ${currentYear}</h3>
+                    <button onclick="changeMonth(1)">▶</button>
+                </div>
+                <div class="calendar-grid">
+                    <div class="calendar-day header">L</div>
+                    <div class="calendar-day header">M</div>
+                    <div class="calendar-day header">M</div>
+                    <div class="calendar-day header">J</div>
+                    <div class="calendar-day header">V</div>
+                    <div class="calendar-day header">S</div>
+                    <div class="calendar-day header">D</div>
+            `;
+
+            const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+            for (let i = 0; i < adjustedFirstDay; i++) {
+                html += '<div class="calendar-day"></div>';
+            }
+
+            for (let day = 1; day <= days; day++) {
+                const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const status = availabilities[dateKey] || 'none';
+                const statusClass = status === 'available' ? 'available' : status === 'unavailable' ? 'unavailable' : '';
+                
+                html += `
+                    <div class="calendar-day ${statusClass}" onclick="toggleAvailability('${dateKey}')">
+                        <span class="day-number">${day}</span>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        async function toggleAvailability(date) {
+            const availabilities = await getAvailability(currentUser, currentYear, currentMonth);
+            
+            const current = availabilities[date] || 'none';
+            if (current === 'none') {
+                availabilities[date] = 'available';
+            } else if (current === 'available') {
+                availabilities[date] = 'unavailable';
+            } else {
+                delete availabilities[date];
+            }
+
+            const result = await setAvailability(currentUser, currentYear, currentMonth, availabilities);
+            if (result.success) {
+                await renderPersonalCalendar();
+            }
+        }
+
+        async function renderGroupCalendar() {
+            const container = document.getElementById('groupCalendar');
+            const statsContainer = document.getElementById('groupStats');
+            const days = getDaysInMonth(currentMonth, currentYear);
+            const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+            const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                              'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+            
+            const allAvailabilities = await getAllAvailabilities(currentYear, currentMonth);
+
+            let totalAvailable = 0;
+            let totalUnavailable = 0;
+            let bestDay = { date: null, count: 0 };
+
+            let html = `
+                <div class="month-selector">
+                    <button onclick="changeGroupMonth(-1)">◀</button>
+                    <h3>${monthNames[currentMonth]} ${currentYear}</h3>
+                    <button onclick="changeGroupMonth(1)">▶</button>
+                </div>
+                <div class="calendar-grid">
+                    <div class="calendar-day header">L</div>
+                    <div class="calendar-day header">M</div>
+                    <div class="calendar-day header">M</div>
+                    <div class="calendar-day header">J</div>
+                    <div class="calendar-day header">V</div>
+                    <div class="calendar-day header">S</div>
+                    <div class="calendar-day header">D</div>
+            `;
+
+            const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+            for (let i = 0; i < adjustedFirstDay; i++) {
+                html += '<div class="calendar-day"></div>';
+            }
+
+            for (let day = 1; day <= days; day++) {
+                const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                let available = 0;
+                let unavailable = 0;
+
+                members.forEach(member => {
+                    const status = allAvailabilities[member] ? allAvailabilities[member][dateKey] : null;
+                    if (status === 'available') {
+                        available++;
+                        totalAvailable++;
+                    } else if (status === 'unavailable') {
+                        unavailable++;
+                        totalUnavailable++;
+                    }
+                });
+
+                if (available > bestDay.count) {
+                    bestDay = { date: day, count: available };
+                }
+
+                const bgClass = available === members.length ? 'available' : 
+                              unavailable === members.length ? 'unavailable' : '';
+                
+                html += `
+                    <div class="calendar-day ${bgClass}">
+                        <span class="day-number">${day}</span>
+                        <div class="availability-count">
+                            ✓${available} ✗${unavailable}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            statsContainer.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-number">${totalAvailable}</div>
+                    <div class="stat-label">Disponibilités</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${totalUnavailable}</div>
+                    <div class="stat-label">Indisponibilités</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${bestDay.date || '-'}</div>
+                    <div class="stat-label">Meilleur jour (${bestDay.count})</div>
+                </div>
+            `;
+        }
+
+        async function renderConcerts() {
+            const container = document.getElementById('concertList');
+            const concerts = await getConcerts();
+
+            if (concerts.length === 0) {
+                container.innerHTML = '<div class="empty-state">Aucun concert prévu pour le moment</div>';
+                return;
+            }
+
+            concerts.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const now = Date.now();
+            const threeDays = 3 * 24 * 60 * 60 * 1000;
+
+            container.innerHTML = concerts.map((concert, idx) => {
+                const concertDate = new Date(concert.date);
+                const isNew = (now - concert.addedAt) < threeDays;
+                
+                return `
+                    <div class="concert-item ${isNew ? 'new' : ''}">
+                        <div class="concert-info">
+                            <h3>${concert.location} ${isNew ? '🔥 NOUVEAU' : ''}</h3>
+                            <p>📅 ${concertDate.toLocaleDateString('fr-FR', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                            })}</p>
+                            ${concert.details ? `<p>${concert.details}</p>` : ''}
+                        </div>
+                        <button class="btn btn-delete" onclick="deleteConcert(${idx})">Supprimer</button>
+                    </div>
+                `;
+            }).join('');
+
+            const hasNew = concerts.some(c => (now - c.addedAt) < threeDays);
+            document.getElementById('newConcertsBadge').style.display = hasNew ? 'inline' : 'none';
+        }
+
+        async function renderLinks() {
+            const container = document.getElementById('linkList');
+            const links = await getLinks();
+
+            if (links.length === 0) {
+                container.innerHTML = '<div class="empty-state">Aucun lien ajouté</div>';
+                return;
+            }
+
+            container.innerHTML = links.map((link, idx) => `
+                <div class="link-item">
+                    <a href="${link.url}" target="_blank">🔗 ${link.name}</a>
+                    <button class="btn btn-delete" onclick="deleteLink(${idx})">Supprimer</button>
+                </div>
+            `).join('');
+        }
+
+        function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderPersonalCalendar();
+        }
+
+        function changeGroupMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderGroupCalendar();
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`section-${section}`).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (section === 'group') {
+                renderGroupCalendar();
+            } else if (section === 'concerts') {
+                renderConcerts();
+            } else if (section === 'links') {
+                renderLinks();
+            }
+        }
+
+        function openConcertModal() {
+            document.getElementById('concertModal').classList.add('active');
+            document.getElementById('concertDate').value = '';
+            document.getElementById('concertLocation').value = '';
+            document.getElementById('concertDetails').value = '';
+        }
+
+        function closeConcertModal() {
+            document.getElementById('concertModal').classList.remove('active');
+        }
+
+        async function addConcert() {
+            const date = document.getElementById('concertDate').value;
+            const location = document.getElementById('concertLocation').value;
+            const details = document.getElementById('concertDetails').value;
+
+            if (!date || !location) {
+                alert('Veuillez remplir la date et le lieu du concert');
+                return;
+            }
+
+            const result = await addConcertAPI({ date, location, details });
+            if (result.success) {
+                closeConcertModal();
+                await renderConcerts();
+            } else {
+                alert('Erreur lors de l\'ajout du concert');
+            }
+        }
+
+        async function deleteConcert(index) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce concert ?')) {
+                return;
+            }
+
+            const result = await deleteConcertAPI(index);
+            if (result.success) {
+                await renderConcerts();
+            }
+        }
+
+        function openLinkModal() {
+            document.getElementById('linkModal').classList.add('active');
+            document.getElementById('linkName').value = '';
+            document.getElementById('linkUrl').value = '';
+        }
+
+        function closeLinkModal() {
+            document.getElementById('linkModal').classList.remove('active');
+        }
+
+        async function addLink() {
+            const name = document.getElementById('linkName').value;
+            const url = document.getElementById('linkUrl').value;
+
+            if (!name || !url) {
+                alert('Veuillez remplir le nom et l\'URL');
+                return;
+            }
+
+            const result = await addLinkAPI({ name, url });
+            if (result.success) {
+                closeLinkModal();
+                await renderLinks();
+            } else {
+                alert('Erreur lors de l\'ajout du lien');
+            }
+        }
+
+        async function deleteLink(index) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce lien ?')) {
+                return;
+            }
+
+            const result = await deleteLinkAPI(index);
+            if (result.success) {
+                await renderLinks();
+            }
+        }
+
+        // Initialize app on load
+        initApp();
+    </script>
+</body>
+</html>

@@ -552,8 +552,10 @@
             : '/api';
 
         let currentUser = null;
-        let currentMonth = new Date().getMonth();
-        let currentYear = new Date().getFullYear();
+        let personalMonth = new Date().getMonth();
+        let personalYear = new Date().getFullYear();
+        let groupMonth = new Date().getMonth();
+        let groupYear = new Date().getFullYear();
         const members = ['Lead Guitar', 'Bass', 'Drums', 'Keys', 'Saxophone', 'Vocals'];
         const userId = 'user_' + (localStorage.getItem('userId') || Math.random().toString(36).substr(2, 9));
         

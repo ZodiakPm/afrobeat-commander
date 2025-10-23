@@ -1,82 +1,109 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs').promises;
-const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data.json');
+
+// Configuration PostgreSQL
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public')); // Pour servir le frontend
+app.use(express.static('public'));
 
-// Initialiser le fichier de données s'il n'existe pas
-async function initDataFile() {
+// Initialiser la base de données
+async function initDatabase() {
     try {
-        await fs.access(DATA_FILE);
-        console.log('✅ Fichier de données trouvé');
-    } catch {
-        const initialData = {
-            availabilities: {},
-            concerts: [],
-            links: [],
-            currentUsers: {}
-        };
-        await fs.writeFile(DATA_FILE, JSON.stringify(initialData, null, 2));
-        console.log('✅ Fichier de données initialisé');
-    }
-}
-
-// Lire les données
-async function readData() {
-    try {
-        const data = await fs.readFile(DATA_FILE, 'utf8');
-        return JSON.parse(data);
+        // Créer la table si elle n'existe pas
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS app_data (
+                id SERIAL PRIMARY KEY,
+                key VARCHAR(255) UNIQUE NOT NULL,
+                value JSONB NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        
+        // Créer un index pour améliorer les performances
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_key ON app_data(key)
+        `);
+        
+        console.log('✅ Base de données initialisée');
     } catch (error) {
-        console.error('Erreur lecture données:', error);
-        return {
-            availabilities: {},
-            concerts: [],
-            links: [],
-            currentUsers: {}
-        };
+        console.error('❌ Erreur initialisation DB:', error);
     }
 }
 
-// Écrire les données
-async function writeData(data) {
+// Fonctions utilitaires pour lire/écrire
+async function getData(key) {
     try {
-        await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2));
+        const result = await pool.query(
+            'SELECT value FROM app_data WHERE key = $1',
+            [key]
+        );
+        return result.rows.length > 0 ? result.rows[0].value : null;
+    } catch (error) {
+        console.error('Erreur lecture:', error);
+        return null;
+    }
+}
+
+async function setData(key, value) {
+    try {
+        await pool.query(
+            `INSERT INTO app_data (key, value, updated_at)
+             VALUES ($1, $2, CURRENT_TIMESTAMP)
+             ON CONFLICT (key)
+             DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP`,
+            [key, value]
+        );
         return true;
     } catch (error) {
-        console.error('Erreur écriture données:', error);
+        console.error('Erreur écriture:', error);
+        return false;
+    }
+}
+
+async function deleteData(key) {
+    try {
+        await pool.query('DELETE FROM app_data WHERE key = $1', [key]);
+        return true;
+    } catch (error) {
+        console.error('Erreur suppression:', error);
         return false;
     }
 }
 
 // ========== ROUTES API ==========
 
-// Get toutes les données (pour chargement initial)
-app.get('/api/data', async (req, res) => {
-    const data = await readData();
-    res.json(data);
+// Health check
+app.get('/api/health', async (req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ status: 'ok', database: 'connected', timestamp: new Date().toISOString() });
+    } catch (error) {
+        res.status(500).json({ status: 'error', database: 'disconnected' });
+    }
 });
 
 // Get user courant
 app.get('/api/current-user/:userId', async (req, res) => {
-    const data = await readData();
-    const user = data.currentUsers[req.params.userId] || null;
+    const key = `current_user_${req.params.userId}`;
+    const user = await getData(key);
     console.log('📱 Get current user:', req.params.userId, '→', user);
     res.json({ user });
 });
 
 // Set user courant
 app.post('/api/current-user/:userId', async (req, res) => {
-    const data = await readData();
-    data.currentUsers[req.params.userId] = req.body.user;
-    const success = await writeData(data);
+    const key = `current_user_${req.params.userId}`;
+    const success = await setData(key, req.body.user);
     console.log('💾 Set current user:', req.params.userId, '→', req.body.user);
     res.json({ success, user: req.body.user });
 });
@@ -85,21 +112,18 @@ app.post('/api/current-user/:userId', async (req, res) => {
 app.get('/api/availability/:member/:year/:month', async (req, res) => {
     const { member, year, month } = req.params;
     const decodedMember = decodeURIComponent(member);
-    const key = `${decodedMember}_${year}_${month}`;
-    const data = await readData();
-    const availability = data.availabilities[key] || {};
-    console.log('📅 Get availability:', key, '→', Object.keys(availability).length, 'days');
-    res.json(availability);
+    const key = `availability_${decodedMember}_${year}_${month}`;
+    const availability = await getData(key);
+    console.log('📅 Get availability:', key, '→', availability ? Object.keys(availability).length : 0, 'days');
+    res.json(availability || {});
 });
 
 // Set disponibilités d'un membre pour un mois
 app.post('/api/availability/:member/:year/:month', async (req, res) => {
     const { member, year, month } = req.params;
     const decodedMember = decodeURIComponent(member);
-    const key = `${decodedMember}_${year}_${month}`;
-    const data = await readData();
-    data.availabilities[key] = req.body;
-    const success = await writeData(data);
+    const key = `availability_${decodedMember}_${year}_${month}`;
+    const success = await setData(key, req.body);
     console.log('💾 Set availability:', key, '→', Object.keys(req.body).length, 'days');
     res.json({ success });
 });
@@ -107,49 +131,50 @@ app.post('/api/availability/:member/:year/:month', async (req, res) => {
 // Get toutes les disponibilités (pour planning groupe)
 app.get('/api/availability/all/:year/:month', async (req, res) => {
     const { year, month } = req.params;
-    const data = await readData();
     const members = ['Lead Guitar', 'Bass', 'Drums', 'Keys', 'Saxophone', 'Vocals'];
     
     console.log('👥 Get all availabilities for', year, month);
-    console.log('📊 Available keys in DB:', Object.keys(data.availabilities));
     
     const allAvailabilities = {};
-    members.forEach(member => {
-        const key = `${member}_${year}_${month}`;
-        allAvailabilities[member] = data.availabilities[key] || {};
-        console.log(`  - ${member}: ${Object.keys(allAvailabilities[member]).length} days`);
-    });
+    
+    for (const member of members) {
+        const key = `availability_${member}_${year}_${month}`;
+        const availability = await getData(key);
+        allAvailabilities[member] = availability || {};
+        console.log(`  - ${member}: ${availability ? Object.keys(availability).length : 0} days`);
+    }
     
     res.json(allAvailabilities);
 });
 
 // Get concerts
 app.get('/api/concerts', async (req, res) => {
-    const data = await readData();
-    res.json(data.concerts);
+    const concerts = await getData('concerts');
+    res.json(concerts || []);
 });
 
 // Add concert
 app.post('/api/concerts', async (req, res) => {
-    const data = await readData();
+    const concerts = await getData('concerts') || [];
     const newConcert = {
         ...req.body,
         addedAt: Date.now()
     };
-    data.concerts.push(newConcert);
-    const success = await writeData(data);
+    concerts.push(newConcert);
+    const success = await setData('concerts', concerts);
     console.log('🎵 Add concert:', newConcert.location, newConcert.date);
     res.json({ success, concert: newConcert });
 });
 
 // Delete concert
 app.delete('/api/concerts/:index', async (req, res) => {
-    const data = await readData();
+    const concerts = await getData('concerts') || [];
     const index = parseInt(req.params.index);
-    if (index >= 0 && index < data.concerts.length) {
-        const deleted = data.concerts[index];
-        data.concerts.splice(index, 1);
-        const success = await writeData(data);
+    
+    if (index >= 0 && index < concerts.length) {
+        const deleted = concerts[index];
+        concerts.splice(index, 1);
+        const success = await setData('concerts', concerts);
         console.log('🗑️ Delete concert:', deleted.location);
         res.json({ success });
     } else {
@@ -159,27 +184,28 @@ app.delete('/api/concerts/:index', async (req, res) => {
 
 // Get links
 app.get('/api/links', async (req, res) => {
-    const data = await readData();
-    res.json(data.links);
+    const links = await getData('links');
+    res.json(links || []);
 });
 
 // Add link
 app.post('/api/links', async (req, res) => {
-    const data = await readData();
-    data.links.push(req.body);
-    const success = await writeData(data);
+    const links = await getData('links') || [];
+    links.push(req.body);
+    const success = await setData('links', links);
     console.log('🔗 Add link:', req.body.name);
     res.json({ success, link: req.body });
 });
 
 // Delete link
 app.delete('/api/links/:index', async (req, res) => {
-    const data = await readData();
+    const links = await getData('links') || [];
     const index = parseInt(req.params.index);
-    if (index >= 0 && index < data.links.length) {
-        const deleted = data.links[index];
-        data.links.splice(index, 1);
-        const success = await writeData(data);
+    
+    if (index >= 0 && index < links.length) {
+        const deleted = links[index];
+        links.splice(index, 1);
+        const success = await setData('links', links);
         console.log('🗑️ Delete link:', deleted.name);
         res.json({ success });
     } else {
@@ -187,18 +213,13 @@ app.delete('/api/links/:index', async (req, res) => {
     }
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
 // Démarrer le serveur
 async function startServer() {
-    await initDataFile();
+    await initDatabase();
     app.listen(PORT, () => {
         console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
         console.log(`📊 API disponible sur http://localhost:${PORT}/api`);
-        console.log(`💾 Données stockées dans: ${DATA_FILE}`);
+        console.log(`💾 Base de données PostgreSQL connectée`);
     });
 }
 

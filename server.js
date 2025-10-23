@@ -16,6 +16,7 @@ app.use(express.static('public')); // Pour servir le frontend
 async function initDataFile() {
     try {
         await fs.access(DATA_FILE);
+        console.log('✅ Fichier de données trouvé');
     } catch {
         const initialData = {
             availabilities: {},
@@ -67,6 +68,7 @@ app.get('/api/data', async (req, res) => {
 app.get('/api/current-user/:userId', async (req, res) => {
     const data = await readData();
     const user = data.currentUsers[req.params.userId] || null;
+    console.log('📱 Get current user:', req.params.userId, '→', user);
     res.json({ user });
 });
 
@@ -75,25 +77,30 @@ app.post('/api/current-user/:userId', async (req, res) => {
     const data = await readData();
     data.currentUsers[req.params.userId] = req.body.user;
     const success = await writeData(data);
+    console.log('💾 Set current user:', req.params.userId, '→', req.body.user);
     res.json({ success, user: req.body.user });
 });
 
 // Get disponibilités d'un membre pour un mois
 app.get('/api/availability/:member/:year/:month', async (req, res) => {
     const { member, year, month } = req.params;
-    const key = `${decodeURIComponent(member)}_${year}_${month}`;
+    const decodedMember = decodeURIComponent(member);
+    const key = `${decodedMember}_${year}_${month}`;
     const data = await readData();
     const availability = data.availabilities[key] || {};
+    console.log('📅 Get availability:', key, '→', Object.keys(availability).length, 'days');
     res.json(availability);
 });
 
 // Set disponibilités d'un membre pour un mois
 app.post('/api/availability/:member/:year/:month', async (req, res) => {
     const { member, year, month } = req.params;
-    const key = `${decodeURIComponent(member)}_${year}_${month}`;
+    const decodedMember = decodeURIComponent(member);
+    const key = `${decodedMember}_${year}_${month}`;
     const data = await readData();
     data.availabilities[key] = req.body;
     const success = await writeData(data);
+    console.log('💾 Set availability:', key, '→', Object.keys(req.body).length, 'days');
     res.json({ success });
 });
 
@@ -103,10 +110,14 @@ app.get('/api/availability/all/:year/:month', async (req, res) => {
     const data = await readData();
     const members = ['Lead Guitar', 'Bass', 'Drums', 'Keys', 'Saxophone', 'Vocals'];
     
+    console.log('👥 Get all availabilities for', year, month);
+    console.log('📊 Available keys in DB:', Object.keys(data.availabilities));
+    
     const allAvailabilities = {};
     members.forEach(member => {
         const key = `${member}_${year}_${month}`;
         allAvailabilities[member] = data.availabilities[key] || {};
+        console.log(`  - ${member}: ${Object.keys(allAvailabilities[member]).length} days`);
     });
     
     res.json(allAvailabilities);
@@ -127,6 +138,7 @@ app.post('/api/concerts', async (req, res) => {
     };
     data.concerts.push(newConcert);
     const success = await writeData(data);
+    console.log('🎵 Add concert:', newConcert.location, newConcert.date);
     res.json({ success, concert: newConcert });
 });
 
@@ -135,8 +147,10 @@ app.delete('/api/concerts/:index', async (req, res) => {
     const data = await readData();
     const index = parseInt(req.params.index);
     if (index >= 0 && index < data.concerts.length) {
+        const deleted = data.concerts[index];
         data.concerts.splice(index, 1);
         const success = await writeData(data);
+        console.log('🗑️ Delete concert:', deleted.location);
         res.json({ success });
     } else {
         res.status(400).json({ success: false, error: 'Index invalide' });
@@ -154,6 +168,7 @@ app.post('/api/links', async (req, res) => {
     const data = await readData();
     data.links.push(req.body);
     const success = await writeData(data);
+    console.log('🔗 Add link:', req.body.name);
     res.json({ success, link: req.body });
 });
 
@@ -162,8 +177,10 @@ app.delete('/api/links/:index', async (req, res) => {
     const data = await readData();
     const index = parseInt(req.params.index);
     if (index >= 0 && index < data.links.length) {
+        const deleted = data.links[index];
         data.links.splice(index, 1);
         const success = await writeData(data);
+        console.log('🗑️ Delete link:', deleted.name);
         res.json({ success });
     } else {
         res.status(400).json({ success: false, error: 'Index invalide' });

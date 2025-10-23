@@ -615,7 +615,7 @@
 
         async function getAvailability(member, year, month) {
             try {
-                return await apiCall(`/availability/${member}/${year}/${month}`);
+                return await apiCall(`/availability/${encodeURIComponent(member)}/${year}/${month}`);
             } catch (e) {
                 return {};
             }
@@ -623,7 +623,7 @@
 
         async function setAvailability(member, year, month, data) {
             try {
-                return await apiCall(`/availability/${member}/${year}/${month}`, {
+                return await apiCall(`/availability/${encodeURIComponent(member)}/${year}/${month}`, {
                     method: 'POST',
                     body: JSON.stringify(data)
                 });
@@ -721,17 +721,17 @@
 
         async function renderPersonalCalendar() {
             const container = document.getElementById('personalCalendar');
-            const days = getDaysInMonth(currentMonth, currentYear);
-            const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+            const days = getDaysInMonth(personalMonth, personalYear);
+            const firstDay = getFirstDayOfMonth(personalMonth, personalYear);
             const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
             
-            const availabilities = await getAvailability(currentUser, currentYear, currentMonth);
+            const availabilities = await getAvailability(currentUser, personalYear, personalMonth);
 
             let html = `
                 <div class="month-selector">
                     <button onclick="changeMonth(-1)">◀</button>
-                    <h3>${monthNames[currentMonth]} ${currentYear}</h3>
+                    <h3>${monthNames[personalMonth]} ${personalYear}</h3>
                     <button onclick="changeMonth(1)">▶</button>
                 </div>
                 <div class="calendar-grid">
@@ -750,7 +750,7 @@
             }
 
             for (let day = 1; day <= days; day++) {
-                const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dateKey = `${personalYear}-${String(personalMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const status = availabilities[dateKey] || 'none';
                 const statusClass = status === 'available' ? 'available' : status === 'unavailable' ? 'unavailable' : '';
                 
@@ -766,7 +766,9 @@
         }
 
         async function toggleAvailability(date) {
-            const availabilities = await getAvailability(currentUser, currentYear, currentMonth);
+            console.log('🔄 Toggle availability:', currentUser, date);
+            const availabilities = await getAvailability(currentUser, personalYear, personalMonth);
+            console.log('📊 Current availabilities:', availabilities);
             
             const current = availabilities[date] || 'none';
             if (current === 'none') {
@@ -777,21 +779,28 @@
                 delete availabilities[date];
             }
 
-            const result = await setAvailability(currentUser, currentYear, currentMonth, availabilities);
+            console.log('💾 Saving:', availabilities);
+            const result = await setAvailability(currentUser, personalYear, personalMonth, availabilities);
+            console.log('✅ Save result:', result);
+            
             if (result.success) {
                 await renderPersonalCalendar();
+            } else {
+                alert('Erreur lors de la sauvegarde !');
             }
         }
 
         async function renderGroupCalendar() {
+            console.log('📅 Rendering group calendar:', groupYear, groupMonth);
             const container = document.getElementById('groupCalendar');
             const statsContainer = document.getElementById('groupStats');
-            const days = getDaysInMonth(currentMonth, currentYear);
-            const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+            const days = getDaysInMonth(groupMonth, groupYear);
+            const firstDay = getFirstDayOfMonth(groupMonth, groupYear);
             const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
             
-            const allAvailabilities = await getAllAvailabilities(currentYear, currentMonth);
+            const allAvailabilities = await getAllAvailabilities(groupYear, groupMonth);
+            console.log('👥 All availabilities:', allAvailabilities);
 
             let totalAvailable = 0;
             let totalUnavailable = 0;
@@ -800,7 +809,7 @@
             let html = `
                 <div class="month-selector">
                     <button onclick="changeGroupMonth(-1)">◀</button>
-                    <h3>${monthNames[currentMonth]} ${currentYear}</h3>
+                    <h3>${monthNames[groupMonth]} ${groupYear}</h3>
                     <button onclick="changeGroupMonth(1)">▶</button>
                 </div>
                 <div class="calendar-grid">
@@ -819,7 +828,7 @@
             }
 
             for (let day = 1; day <= days; day++) {
-                const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dateKey = `${groupYear}-${String(groupMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 let available = 0;
                 let unavailable = 0;
 
@@ -868,6 +877,8 @@
                     <div class="stat-label">Meilleur jour (${bestDay.count})</div>
                 </div>
             `;
+            
+            console.log('📊 Stats:', { totalAvailable, totalUnavailable, bestDay });
         }
 
         async function renderConcerts() {
@@ -927,25 +938,25 @@
         }
 
         function changeMonth(delta) {
-            currentMonth += delta;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            } else if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
+            personalMonth += delta;
+            if (personalMonth > 11) {
+                personalMonth = 0;
+                personalYear++;
+            } else if (personalMonth < 0) {
+                personalMonth = 11;
+                personalYear--;
             }
             renderPersonalCalendar();
         }
 
         function changeGroupMonth(delta) {
-            currentMonth += delta;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            } else if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
+            groupMonth += delta;
+            if (groupMonth > 11) {
+                groupMonth = 0;
+                groupYear++;
+            } else if (groupMonth < 0) {
+                groupMonth = 11;
+                groupYear--;
             }
             renderGroupCalendar();
         }

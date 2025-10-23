@@ -138,7 +138,7 @@ app.get('/api/availability/all/:year/:month', async (req, res) => {
     const allAvailabilities = {};
     
     for (const member of members) {
-        const key = `availability_${member}_${year}_${month}`;
+        const key = `availability_${encodeURIComponent(member)}_${year}_${month}`;
         const availability = await getData(key);
         allAvailabilities[member] = availability || {};
         console.log(`  - ${member}: ${availability ? Object.keys(availability).length : 0} days`);

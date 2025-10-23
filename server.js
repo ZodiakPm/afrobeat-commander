@@ -81,7 +81,7 @@ app.post('/api/current-user/:userId', async (req, res) => {
 // Get disponibilités d'un membre pour un mois
 app.get('/api/availability/:member/:year/:month', async (req, res) => {
     const { member, year, month } = req.params;
-    const key = `${member}_${year}_${month}`;
+    const key = `${decodeURIComponent(member)}_${year}_${month}`;
     const data = await readData();
     const availability = data.availabilities[key] || {};
     res.json(availability);
@@ -90,7 +90,7 @@ app.get('/api/availability/:member/:year/:month', async (req, res) => {
 // Set disponibilités d'un membre pour un mois
 app.post('/api/availability/:member/:year/:month', async (req, res) => {
     const { member, year, month } = req.params;
-    const key = `${member}_${year}_${month}`;
+    const key = `${decodeURIComponent(member)}_${year}_${month}`;
     const data = await readData();
     data.availabilities[key] = req.body;
     const success = await writeData(data);
